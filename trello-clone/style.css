@@ -48,12 +48,40 @@ main {
   outline-offset: -2px;
 }
 
+.column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
 .column h2 {
   font-size: 14px;
-  margin: 4px 8px 10px;
+  margin: 4px 0 4px 8px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.sort-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.sort-btn {
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sort-btn:hover {
+  background: #f0f1f3;
+  color: var(--text);
 }
 
 .add-card-btn {
@@ -95,10 +123,14 @@ main {
   cursor: pointer;
 }
 
-.card-due {
+.card-meta {
   font-size: 12px;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: var(--muted);
+}
+
+.card-meta:last-of-type {
+  margin-bottom: 8px;
 }
 
 .card-actions {

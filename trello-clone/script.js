@@ -1,16 +1,19 @@
 const board = document.getElementById('board');
 
+const PRIORITIES = ['高', '中', '低'];
+const PRIORITY_RANK = { 高: 1, 中: 2, 低: 3 };
+
 const state = {
   lists: [
     { id: 'todo', title: '未着手', cards: [
-      { id: 1, title: 'カード1', dueDate: null },
-      { id: 2, title: 'カード2', dueDate: null },
+      { id: 1, title: 'カード1', dueDate: null, priority: null },
+      { id: 2, title: 'カード2', dueDate: null, priority: null },
     ] },
     { id: 'doing', title: '進行中', cards: [
-      { id: 3, title: 'カード3', dueDate: null },
+      { id: 3, title: 'カード3', dueDate: null, priority: null },
     ] },
     { id: 'done', title: '完了', cards: [
-      { id: 4, title: 'カード4', dueDate: null },
+      { id: 4, title: 'カード4', dueDate: null, priority: null },
     ] },
   ],
 };
@@ -41,12 +44,44 @@ function renderColumn(list, listIndex) {
   column.addEventListener('drop', (e) => {
     e.preventDefault();
     column.classList.remove('drag-over');
-    moveCardById(draggingCardId, listIndex);
+    moveCardTo(draggingCardId, listIndex, null);
   });
+
+  const header = document.createElement('div');
+  header.className = 'column-header';
 
   const heading = document.createElement('h2');
   heading.textContent = list.title;
-  column.appendChild(heading);
+  header.appendChild(heading);
+
+  const sortActions = document.createElement('div');
+  sortActions.className = 'sort-actions';
+
+  const sortByPriorityBtn = document.createElement('button');
+  sortByPriorityBtn.className = 'sort-btn';
+  sortByPriorityBtn.textContent = '優先度順';
+  sortByPriorityBtn.addEventListener('click', () => {
+    list.cards.sort((a, b) => (PRIORITY_RANK[a.priority] || 4) - (PRIORITY_RANK[b.priority] || 4));
+    render();
+  });
+  sortActions.appendChild(sortByPriorityBtn);
+
+  const sortByDueDateBtn = document.createElement('button');
+  sortByDueDateBtn.className = 'sort-btn';
+  sortByDueDateBtn.textContent = '期限順';
+  sortByDueDateBtn.addEventListener('click', () => {
+    list.cards.sort((a, b) => {
+      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return 0;
+    });
+    render();
+  });
+  sortActions.appendChild(sortByDueDateBtn);
+
+  header.appendChild(sortActions);
+  column.appendChild(header);
 
   if (addingListId === list.id) {
     column.appendChild(createAddCardForm(list));
@@ -61,20 +96,31 @@ function renderColumn(list, listIndex) {
     column.appendChild(addBtn);
   }
 
-  sortCardsByDueDate(list.cards).forEach((card) => {
-    column.appendChild(renderCard(card, list));
+  list.cards.forEach((card) => {
+    column.appendChild(renderCard(card, list, listIndex));
   });
 
   return column;
 }
 
-function sortCardsByDueDate(cards) {
-  return [...cards].sort((a, b) => {
-    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-    if (a.dueDate) return -1;
-    if (b.dueDate) return 1;
-    return 0;
+function createPriorityInput(selectedValue) {
+  const select = document.createElement('select');
+  select.className = 'inline-input';
+
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = '優先度未設定';
+  select.appendChild(emptyOption);
+
+  PRIORITIES.forEach((p) => {
+    const option = document.createElement('option');
+    option.value = p;
+    option.textContent = p;
+    select.appendChild(option);
   });
+
+  select.value = selectedValue || '';
+  return select;
 }
 
 function createAddCardForm(list) {
@@ -89,10 +135,17 @@ function createAddCardForm(list) {
   dateInput.className = 'inline-input';
   dateInput.type = 'date';
 
+  const priorityInput = createPriorityInput('');
+
   const confirmAdd = () => {
     const title = titleInput.value.trim();
     if (title) {
-      list.cards.push({ id: nextCardId++, title, dueDate: dateInput.value || null });
+      list.cards.push({
+        id: nextCardId++,
+        title,
+        dueDate: dateInput.value || null,
+        priority: priorityInput.value || null,
+      });
     }
     addingListId = null;
     render();
@@ -120,6 +173,7 @@ function createAddCardForm(list) {
 
   wrapper.appendChild(titleInput);
   wrapper.appendChild(dateInput);
+  wrapper.appendChild(priorityInput);
   wrapper.appendChild(actions);
 
   requestAnimationFrame(() => titleInput.focus());
@@ -127,7 +181,7 @@ function createAddCardForm(list) {
   return wrapper;
 }
 
-function renderCard(card, list) {
+function renderCard(card, list, listIndex) {
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.draggable = true;
@@ -141,6 +195,29 @@ function renderCard(card, list) {
   cardEl.addEventListener('dragend', () => {
     cardEl.classList.remove('dragging');
     draggingCardId = null;
+  });
+  cardEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  cardEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggingCardId === card.id) return;
+
+    const rect = cardEl.getBoundingClientRect();
+    const droppedAfter = e.clientY - rect.top > rect.height / 2;
+
+    let insertBeforeCardId;
+    if (droppedAfter) {
+      const currentIndex = list.cards.findIndex((c) => c.id === card.id);
+      const nextCard = list.cards[currentIndex + 1];
+      insertBeforeCardId = nextCard ? nextCard.id : null;
+    } else {
+      insertBeforeCardId = card.id;
+    }
+
+    moveCardTo(draggingCardId, listIndex, insertBeforeCardId);
   });
 
   if (editingCardId === card.id) {
@@ -159,9 +236,16 @@ function renderCard(card, list) {
 
   if (card.dueDate) {
     const due = document.createElement('p');
-    due.className = 'card-due';
+    due.className = 'card-meta';
     due.textContent = `期限: ${card.dueDate}`;
     cardEl.appendChild(due);
+  }
+
+  if (card.priority) {
+    const priority = document.createElement('p');
+    priority.className = 'card-meta';
+    priority.textContent = `優先度: ${card.priority}`;
+    cardEl.appendChild(priority);
   }
 
   const actions = document.createElement('div');
@@ -202,11 +286,14 @@ function createEditForm(card) {
   dateInput.type = 'date';
   dateInput.value = card.dueDate || '';
 
+  const priorityInput = createPriorityInput(card.priority);
+
   const confirmEdit = () => {
     const title = titleInput.value.trim();
     if (title) {
       card.title = title;
       card.dueDate = dateInput.value || null;
+      card.priority = priorityInput.value || null;
     }
     editingCardId = null;
     render();
@@ -234,6 +321,7 @@ function createEditForm(card) {
 
   wrapper.appendChild(titleInput);
   wrapper.appendChild(dateInput);
+  wrapper.appendChild(priorityInput);
   wrapper.appendChild(actions);
 
   requestAnimationFrame(() => {
@@ -244,21 +332,33 @@ function createEditForm(card) {
   return wrapper;
 }
 
-function moveCardById(cardId, toIndex) {
+function moveCardTo(cardId, toListIndex, insertBeforeCardId) {
   if (cardId == null) return;
+
   let card = null;
-  let fromList = null;
-  for (const list of state.lists) {
+  let fromListIndex = -1;
+  state.lists.forEach((list, idx) => {
     const found = list.cards.find((c) => c.id === cardId);
     if (found) {
       card = found;
-      fromList = list;
-      break;
+      fromListIndex = idx;
+    }
+  });
+  if (!card) return;
+
+  state.lists[fromListIndex].cards = state.lists[fromListIndex].cards.filter((c) => c.id !== cardId);
+
+  const destCards = state.lists[toListIndex].cards;
+  if (insertBeforeCardId == null) {
+    destCards.push(card);
+  } else {
+    const insertIndex = destCards.findIndex((c) => c.id === insertBeforeCardId);
+    if (insertIndex === -1) {
+      destCards.push(card);
+    } else {
+      destCards.splice(insertIndex, 0, card);
     }
   }
-  if (!card || fromList === state.lists[toIndex]) return;
-  fromList.cards = fromList.cards.filter((c) => c.id !== cardId);
-  state.lists[toIndex].cards.push(card);
   render();
 }
 

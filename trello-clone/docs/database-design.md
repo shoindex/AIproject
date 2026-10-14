@@ -36,6 +36,7 @@ erDiagram
         text title
         integer order
         text due_date "nullable"
+        text priority "nullable: 高/中/低"
     }
 ```
 
@@ -43,6 +44,8 @@ erDiagram
 
 - SQLiteのテーブルは `boards` / `lists` / `cards` の3つを想定し、`lists.board_id` と `cards.list_id` で親を参照する（外部キー）
 - `cards.due_date` は期限が未設定のカードでは `NULL` を許容する
+- `cards.priority` は優先度が未設定のカードでは `NULL` を許容し、値は `高` / `中` / `低` のいずれか
+- `order` は「優先度順」「期限順」ボタンによる並び替え、またはドラッグ&ドロップによる手動の並び替えのたびに更新される
 - `order` はフェーズ2以降の「同一列内での並び替え」実装時に使用する並び順
 - id はSQLiteの `INTEGER PRIMARY KEY`（自動採番）とする
 - フェーズ1では画面上のメモリ内データで動作させ、フェーズ2でバックエンドAPIを実装し、この構造のままSQLiteへの保存・読み込みに切り替える
