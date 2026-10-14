@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: trello-clone-postgres
+    environment:
+      POSTGRES_DB: trello_clone
+      POSTGRES_USER: trello_clone
+      POSTGRES_PASSWORD: trello_clone
+    ports:
+      - "5432:5432"
+    volumes:
+      - trello-clone-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  trello-clone-postgres-data:
