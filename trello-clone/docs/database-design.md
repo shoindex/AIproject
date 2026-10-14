@@ -35,12 +35,14 @@ erDiagram
         integer list_id FK
         text title
         integer order
+        text due_date "nullable"
     }
 ```
 
 ## 補足
 
 - SQLiteのテーブルは `boards` / `lists` / `cards` の3つを想定し、`lists.board_id` と `cards.list_id` で親を参照する（外部キー）
+- `cards.due_date` は期限が未設定のカードでは `NULL` を許容する
 - `order` はフェーズ2以降の「同一列内での並び替え」実装時に使用する並び順
 - id はSQLiteの `INTEGER PRIMARY KEY`（自動採番）とする
 - フェーズ1では画面上のメモリ内データで動作させ、フェーズ2でバックエンドAPIを実装し、この構造のままSQLiteへの保存・読み込みに切り替える
